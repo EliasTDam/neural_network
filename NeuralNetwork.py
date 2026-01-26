@@ -12,7 +12,7 @@ class NeuralNetwork:
         self.biases = []
 
         # Learning rate
-        self.a = 0.1
+        self.a = 0.3
 
         # Create network if no existing network is provided
         if path_to_network is None:
@@ -79,14 +79,15 @@ class NeuralNetwork:
         for instance in range(data.shape[0]):
 
             d_nabla_bias, d_nabla_weight = self.backpropogation(data[instance], labels[instance])
-            nabla_weights = [n + (d / data.shape[0]) for n, d in zip(nabla_weights, d_nabla_weight)]
-            nabla_biases = [n + (d / data.shape[0]) for n, d in zip(nabla_biases, d_nabla_bias)]
+            nabla_weights = [n + d for n, d in zip(nabla_weights, d_nabla_weight)]
+            nabla_biases = [n + d for n, d in zip(nabla_biases, d_nabla_bias)]
 
         # Apply the change
         for layer in range(len(self.weights)):
-            self.weights[layer] = self.weights[layer] + self.a * nabla_weights[layer]
-            self.biases[layer] = self.biases[layer] + self.a * nabla_biases[layer]
+            #print(f"Avg prcnt change for layer {layer}: {np.mean((self.a * nabla_weights[layer]) / self.weights[layer])}")
 
+            self.weights[layer] = self.weights[layer] - self.a * (nabla_weights[layer] / data.shape[0])
+            self.biases[layer] = self.biases[layer] - self.a * (nabla_biases[layer] / data.shape[0])
 
 
     def backpropogation(self, input_data, target_value):
@@ -106,14 +107,16 @@ class NeuralNetwork:
 
         delta = self.calculateCostDerivative(target_value, activations[-1]) * self.sigmoid_prime(zs[-1])
         nabla_b[-1] = delta
-        nabla_w[-1] = np.dot(delta, activations[-2].transpose())
+        #print(f"activations[-2].transpose(): {activations[-2].transpose().shape} \n"
+        #      f"delta: {delta.shape}")
+        nabla_w[-1] = delta[:, np.newaxis] @ activations[-2][np.newaxis, :]
 
         for l in range(2, len(self.weights)):
             z = zs[-l]
             sp = self.sigmoid_prime(z)
             delta = np.dot(self.weights[-l + 1].transpose(), delta) * sp
             nabla_b[-l] = delta
-            nabla_w[-l] = np.dot(delta, activations[-l].transpose())
+            nabla_w[-l] = delta[:, np.newaxis] @ activations[-l - 1][np.newaxis, :]
         return (nabla_b, nabla_w)
 
         """
